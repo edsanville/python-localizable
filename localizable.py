@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Adapted from Transifex: https://github.com/transifex/transifex/blob/master/transifex/resources/formats/strings.py
 # -*- coding: utf-8 -*-
 # GPLv2
@@ -60,44 +61,67 @@ def _get_content_from_file(filename, encoding):
     finally:
         f.close()
 
-def parse_strings(content="", filename=None):
-    """Parse an apple .strings file and create a stringset with
-    all entries in the file.
+def read(filename):
+  content = _get_content(filename=filename)
+  return parse(content)
 
-    See
-    http://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/BPInternational/Articles/StringsFiles.html
-    for details.
-    """
-    if filename is not None:
-        content = _get_content(filename=filename)
+def parse(content=''):
+  """Parse an apple .strings file and create a stringset with
+  all entries in the file.
 
-    stringset = []
-    f = content
-    if f.startswith(u'\ufeff'):
-        f = f.lstrip(u'\ufeff')
-    #regex for finding all comments in a file
-    cp = r'(?:/\*(?P<comment>(?:[^*]|(?:\*+[^*/]))*\**)\*/)'
-    p = re.compile(r'(?:%s[ \t]*[\n]|[\r\n]|[\r]){0,1}(?P<line>(("(?P<key>[^"\\]*(?:\\.[^"\\]*)*)")|(?P<property>\w+))\s*=\s*"(?P<value>[^"\\]*(?:\\.[^"\\]*)*)"\s*;)'%cp, re.DOTALL|re.U)
-    #c = re.compile(r'\s*/\*(.|\s)*?\*/\s*', re.U)
-    c = re.compile(r'//[^\n]*\n|/\*(?:.|[\r\n])*?\*/', re.U)
-    ws = re.compile(r'\s+', re.U)
-    end=0
-    start = 0
-    for i in p.finditer(f):
-        start = i.start('line')
-        end_ = i.end()
-        key = i.group('key')
-        comment = i.group('comment') or ''
-        if not key:
-            key = i.group('property')
-        value = i.group('value')
-        while end < start:
-            m = c.match(f, end, start) or ws.match(f, end, start)
-            if not m or m.start() != end:
-                print("Invalid syntax: %s" %\
-                        f[end:start])
-            end = m.end()
-        end = end_
-        key = _unescape_key(key)
-        stringset.append({'key': key, 'value': _unescape(value), 'comment': comment})
-    return stringset
+  See
+  http://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/BPInternational/Articles/StringsFiles.html
+  for details.
+  """
+
+  stringset = []
+  f = content
+  if f.startswith(u'\ufeff'):
+    f = f.lstrip(u'\ufeff')
+  #regex for finding all comments in a file
+  cp = r'(?:/\*(?P<comment>(?:[^*]|(?:\*+[^*/]))*\**)\*/)'
+  p = re.compile(r'(?:%s[ \t]*[\n]|[\r\n]|[\r]){0,1}(?P<line>(("(?P<key>[^"\\]*(?:\\.[^"\\]*)*)")|(?P<property>\w+))\s*=\s*"(?P<value>[^"\\]*(?:\\.[^"\\]*)*)"\s*;)'%cp, re.DOTALL|re.U)
+  #c = re.compile(r'\s*/\*(.|\s)*?\*/\s*', re.U)
+  c = re.compile(r'//[^\n]*\n|/\*(?:.|[\r\n])*?\*/', re.U)
+  ws = re.compile(r'\s+', re.U)
+  end=0
+  start = 0
+  for i in p.finditer(f):
+    start = i.start('line')
+    end_ = i.end()
+    key = i.group('key')
+    comment = i.group('comment') or ''
+    if not key:
+      key = i.group('property')
+    value = i.group('value')
+    while end < start:
+      m = c.match(f, end, start) or ws.match(f, end, start)
+      if not m or m.start() != end:
+        print("Invalid syntax: %s" %\
+              f[end:start])
+      end = m.end()
+    end = end_
+    key = _unescape_key(key)
+    stringset.append({'key': key, 'value': _unescape(value), 'comment': comment})
+  return stringset
+
+def escape_string(s):
+  return s.replace('"', '\\"')
+
+def write(stringset, filename):
+  o = open(filename, 'w')
+
+  for item in stringset:
+    if item['comment'].find('\n') != -1:
+      # write multiline comment
+      o.write('/*%s*/\n' % (item['comment']))
+    else:
+      o.write('//%s\n' % (item['comment']))
+      
+    o.write('"%s" = "%s";\n' % (escape_string(item['key']), escape_string(item['value'])))
+
+  o.close()
+
+if __name__ == '__main__':
+  a = read('test.strings')
+  write(a, 'test.output')
