@@ -13,8 +13,8 @@ You can either parse a full string directly or pass a file path:
 
 	import localizable
 	
-	strings = localizable.parse_strings(filename='Localizable.strings')
-	strings = localizable.parse_strings(content="content of .strings file") # this works too
+	strings = localizable.read(filename='Localizable.strings')
+	strings = localizable.parse(content="content of .strings file") # this works too
 	
 The output format is an array of dictionaries, in order, with the following key/value pairs:
 
@@ -24,6 +24,10 @@ The output format is an array of dictionaries, in order, with the following key/
  * `key`: "Key"
  * `value`: "Value"
  * `comment`: "Comment"
+
+You can also write a stringset back out to a file:
+
+	localizable.write(filename='Localizable.strings')
  
 # License
 
